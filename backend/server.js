@@ -11,6 +11,7 @@ app.listen(PORT, () => {
   console.log(`🚀 AAA Tech Solutions Backend Server Running`);
   console.log(`📡 URL: http://localhost:${PORT}`);
   console.log(`📡 API Base URL: http://localhost:${PORT}/api`);
-  console.log(`🗄️ Database: MySQL (${process.env.DB_NAME || 'aaa_tech_solutions'})`);
+  const dbType = process.env.DB_HOST && process.env.DB_HOST.includes('tidbcloud.com') ? 'TiDB Cloud' : 'MySQL';
+  console.log(`🗄️ Database: ${dbType} (${process.env.DB_NAME || 'aaa_tech_solutions'})`);
   console.log(`======================================================\n`);
 });

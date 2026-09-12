@@ -3,7 +3,12 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
-// Database configuration with environment variable support
+// Determine if SSL is required (TiDB Cloud, port 4000, or DB_SSL=true)
+const isSSL = process.env.DB_SSL === 'true' || 
+              (process.env.DB_HOST && process.env.DB_HOST.includes('tidbcloud.com')) ||
+              (process.env.DB_PORT && parseInt(process.env.DB_PORT, 10) === 4000);
+
+// Database configuration with environment variable and TiDB Cloud support
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306,
@@ -17,17 +22,25 @@ const dbConfig = {
   keepAliveInitialDelay: 0
 };
 
+if (isSSL) {
+  dbConfig.ssl = {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
+  };
+}
+
 // Create a connection pool using mysql2/promise
 const pool = mysql.createPool(dbConfig);
 
 // Safe connection verification
 pool.getConnection()
   .then((conn) => {
-    console.log(`✅ MySQL Connected Successfully: ${dbConfig.database}@${dbConfig.host}:${dbConfig.port}`);
+    const sslInfo = isSSL ? ' (SSL/TLS Enabled)' : '';
+    console.log(`✅ Database Connected Successfully: ${dbConfig.database}@${dbConfig.host}:${dbConfig.port}${sslInfo}`);
     conn.release();
   })
   .catch((err) => {
-    console.error(`❌ MySQL Connection Failed [${dbConfig.database}@${dbConfig.host}]:`, err.message);
+    console.error(`❌ Database Connection Failed [${dbConfig.database}@${dbConfig.host}]:`, err.message);
   });
 
 module.exports = pool;

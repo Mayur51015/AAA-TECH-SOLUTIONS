@@ -4,12 +4,22 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
+const isSSL = process.env.DB_SSL === 'true' || 
+              (process.env.DB_HOST && process.env.DB_HOST.includes('tidbcloud.com')) ||
+              (process.env.DB_PORT && parseInt(process.env.DB_PORT, 10) === 4000);
+
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  multipleStatements: true
+  multipleStatements: true,
+  ...(isSSL ? {
+    ssl: {
+      minVersion: 'TLSv1.2',
+      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
+    }
+  } : {})
 };
 
 const DB_NAME = process.env.DB_NAME || 'aaa_tech_solutions';
@@ -17,11 +27,17 @@ const DB_NAME = process.env.DB_NAME || 'aaa_tech_solutions';
 async function seedDatabase() {
   let connection;
   try {
-    console.log(`📡 Connecting to MySQL server at ${dbConfig.host}:${dbConfig.port}...`);
+    const sslLabel = isSSL ? ' (SSL/TLS Enabled)' : '';
+    console.log(`📡 Connecting to MySQL/TiDB server at ${dbConfig.host}:${dbConfig.port}${sslLabel}...`);
     connection = await mysql.createConnection(dbConfig);
 
     // 1. Create and switch to Database
-    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+    try {
+      await connection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+    } catch (e) {
+      // On some managed cloud instances (e.g. TiDB Serverless), DB is pre-allocated
+      console.log(`ℹ️ Note on database creation: ${e.message}`);
+    }
     await connection.query(`USE \`${DB_NAME}\`;`);
     console.log(`✅ Using database: ${DB_NAME}`);
 
@@ -250,16 +266,17 @@ async function seedDatabase() {
     // ----------------------------------------------------
     const [existingAdmins] = await connection.query('SELECT COUNT(*) as count FROM admins');
     if (existingAdmins[0].count === 0) {
+      const adminUsername = process.env.ADMIN_USERNAME || 'admin';
       const adminEmail = process.env.ADMIN_EMAIL || 'admin@gmail.com';
       const rawPassword = process.env.ADMIN_PASSWORD || 'admin123';
-      const salt = await bcrypt.genSalt(10);
+      const salt = await bcrypt.genSalt(12);
       const passwordHash = await bcrypt.hash(rawPassword, salt);
 
       await connection.query(
-        'INSERT INTO admins (name, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?)',
-        ['Super Administrator', adminEmail, passwordHash, 'admin', true]
+        'INSERT INTO admins (username, name, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+        [adminUsername, 'Super Administrator', adminEmail, passwordHash, 'admin', true]
       );
-      console.log(`✅ Default admin created: ${adminEmail} (password: ${rawPassword})`);
+      console.log(`✅ Default admin created: username="${adminUsername}", email="${adminEmail}" (password: ${rawPassword})`);
     }
 
     console.log('\n🎉 Database Initialization and Seeding Complete!\n');
