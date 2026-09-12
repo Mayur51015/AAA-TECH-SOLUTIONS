@@ -2,18 +2,52 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle2, ShieldCheck, ArrowRight, BookOpen, Clock, User, Mail, Phone, GraduationCap, MessageSquare, AlertCircle } from 'lucide-react';
 import { coursesData } from '../../data/courses';
-import { submitEnrollmentApplication } from '../../services';
+import { submitEnrollmentApplication, getCourses } from '../../services';
 import './EnrollmentPage.css';
 
 export default function EnrollmentPage() {
   const [searchParams] = useSearchParams();
-  const initialCourse = searchParams.get('course') || coursesData[0].id;
+
+  // Real courses from API
+  const [apiCourses, setApiCourses] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadCourses() {
+      try {
+        const courses = await getCourses();
+        if (courses && courses.length > 0 && isMounted) {
+          setApiCourses(courses);
+        }
+      } catch (err) {
+        console.warn('Failed to load courses from API:', err.message);
+      }
+    }
+    loadCourses();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Build course options — prefer API courses (numeric MySQL IDs)
+  const courseOptions = apiCourses.length > 0 ? apiCourses : coursesData;
+  const firstCourseId = courseOptions[0]?.id || coursesData[0]?.id || '';
+
+  // Resolve initial course from URL params
+  const paramCourse = searchParams.get('course');
+  let initialCourseId = firstCourseId;
+  if (paramCourse) {
+    // Try to find matching course by slug or numeric id
+    const matched = courseOptions.find(c =>
+      String(c.id) === paramCourse ||
+      c.slug === paramCourse
+    );
+    initialCourseId = matched ? matched.id : paramCourse;
+  }
 
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
-    courseId: initialCourse,
+    courseId: initialCourseId,
     qualification: 'Bachelor\'s Degree (Computer Science / Tech)',
     goals: '',
     agreeTerms: true
@@ -22,16 +56,24 @@ export default function EnrollmentPage() {
   const [submitted, setSubmitted] = useState(false);
   const [refId, setRefId] = useState('');
   const [formErrors, setFormErrors] = useState({});
+  const [apiError, setApiError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Update courseId when URL params change
   useEffect(() => {
-    const paramCourse = searchParams.get('course');
-    if (paramCourse) {
-      setFormData(prev => ({ ...prev, courseId: paramCourse }));
+    const paramCourseVal = searchParams.get('course');
+    if (paramCourseVal && courseOptions.length > 0) {
+      const matched = courseOptions.find(c =>
+        String(c.id) === paramCourseVal ||
+        c.slug === paramCourseVal
+      );
+      if (matched) {
+        setFormData(prev => ({ ...prev, courseId: matched.id }));
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, apiCourses]);
 
-  const selectedCourseObj = coursesData.find(c => c.id === formData.courseId) || coursesData[0];
+  const selectedCourseObj = courseOptions.find(c => String(c.id) === String(formData.courseId)) || courseOptions[0] || coursesData[0];
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -42,13 +84,16 @@ export default function EnrollmentPage() {
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
+    if (apiError) {
+      setApiError('');
+    }
   };
 
   const validateForm = () => {
     const errors = {};
     if (!formData.fullName.trim()) errors.fullName = 'Please enter your full name.';
     if (!formData.email.trim() || !/^\S+@\S+\.\S+$/.test(formData.email)) errors.email = 'Please provide a valid email address.';
-    if (!formData.phone.trim() || formData.phone.length < 7) errors.phone = 'Please provide a valid contact phone number.';
+    if (!formData.phone.trim() || formData.phone.replace(/\D/g, '').length < 10) errors.phone = 'Please provide a valid 10-digit phone number.';
     if (!formData.agreeTerms) errors.agreeTerms = 'You must agree to the enrollment terms.';
     return errors;
   };
@@ -62,25 +107,32 @@ export default function EnrollmentPage() {
     }
 
     setIsSubmitting(true);
-    const generatedId = `AAA-ENR-${Math.floor(100000 + Math.random() * 900000)}`;
+    setApiError('');
 
     try {
-      await submitEnrollmentApplication({
-        fullName: formData.fullName,
-        email: formData.email,
-        mobile: formData.phone,
-        course: selectedCourseObj ? selectedCourseObj.title : formData.courseId,
-        plan: formData.qualification || 'Standard',
-        message: formData.goals || ''
-      });
-    } catch (apiErr) {
-      console.warn('Backend enrollment API error (saved locally):', apiErr);
-    }
+      const combinedNotes = [
+        formData.qualification ? `Qualification: ${formData.qualification}` : '',
+        formData.goals.trim() ? `Goals: ${formData.goals.trim()}` : ''
+      ].filter(Boolean).join(' | ');
 
-    setIsSubmitting(false);
-    setRefId(generatedId);
-    setSubmitted(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+      const result = await submitEnrollmentApplication({
+        full_name: formData.fullName.trim(),
+        email: formData.email.trim(),
+        mobile: formData.phone.trim(),
+        course_id: Number(formData.courseId) || formData.courseId,
+        message: combinedNotes
+      });
+
+      const enrollmentId = result?.data?.id || result?.enrollmentId;
+      setRefId(enrollmentId ? `AAA-ENR-${enrollmentId}` : `AAA-ENR-${Math.floor(100000 + Math.random() * 900000)}`);
+      setIsSubmitting(false);
+      setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (apiErr) {
+      setIsSubmitting(false);
+      const errorMessage = apiErr?.message || 'Enrollment submission failed. Please try again or contact us via WhatsApp.';
+      setApiError(errorMessage);
+    }
   };
 
   const dynamicWaUrl = `https://wa.me/917358533721?text=${encodeURIComponent(
@@ -121,6 +173,14 @@ export default function EnrollmentPage() {
                 <p className="form-section-desc">Please provide accurate contact and educational details.</p>
 
                 <form onSubmit={handleSubmit} className="enrollment-form" noValidate>
+                  {/* API Error Banner */}
+                  {apiError && (
+                    <div className="modal-api-error-banner" role="alert">
+                      <AlertCircle size={16} aria-hidden="true" />
+                      <span>{apiError}</span>
+                    </div>
+                  )}
+
                   {/* Full Name */}
                   <div className="form-group">
                     <label htmlFor="fullName" className="form-label">
@@ -136,6 +196,7 @@ export default function EnrollmentPage() {
                         onChange={handleInputChange}
                         placeholder="e.g. Priya Sharma"
                         className={`form-input ${formErrors.fullName ? 'input-error' : ''}`}
+                        disabled={isSubmitting}
                         required
                       />
                     </div>
@@ -158,6 +219,7 @@ export default function EnrollmentPage() {
                           onChange={handleInputChange}
                           placeholder="priya@example.com"
                           className={`form-input ${formErrors.email ? 'input-error' : ''}`}
+                          disabled={isSubmitting}
                           required
                         />
                       </div>
@@ -178,6 +240,7 @@ export default function EnrollmentPage() {
                           onChange={handleInputChange}
                           placeholder="+91 98765 43210"
                           className={`form-input ${formErrors.phone ? 'input-error' : ''}`}
+                          disabled={isSubmitting}
                           required
                         />
                       </div>
@@ -198,10 +261,11 @@ export default function EnrollmentPage() {
                         value={formData.courseId}
                         onChange={handleInputChange}
                         className="form-input form-select"
+                        disabled={isSubmitting}
                       >
-                        {coursesData.map(c => (
+                        {courseOptions.map(c => (
                           <option key={c.id} value={c.id}>
-                            {c.title} — {c.duration} ({c.level})
+                            {c.title} — {c.duration || ''} ({c.level || ''})
                           </option>
                         ))}
                       </select>
@@ -221,6 +285,7 @@ export default function EnrollmentPage() {
                         value={formData.qualification}
                         onChange={handleInputChange}
                         className="form-input form-select"
+                        disabled={isSubmitting}
                       >
                         <option value="Bachelor's Degree (Computer Science / Tech)">Bachelor's Degree (CS / Tech)</option>
                         <option value="Bachelor's Degree (Other Discipline)">Bachelor's Degree (Other)</option>
@@ -244,6 +309,7 @@ export default function EnrollmentPage() {
                       onChange={handleInputChange}
                       placeholder="Briefly describe your career goals or specific questions..."
                       className="form-input form-textarea"
+                      disabled={isSubmitting}
                     ></textarea>
                   </div>
 
@@ -255,6 +321,7 @@ export default function EnrollmentPage() {
                         name="agreeTerms"
                         checked={formData.agreeTerms}
                         onChange={handleInputChange}
+                        disabled={isSubmitting}
                       />
                       <span>I agree to the <Link to="/terms" target="_blank">Enrollment Guidelines</Link> and <Link to="/privacy-policy" target="_blank">Privacy Policy</Link>.</span>
                     </label>
@@ -262,9 +329,19 @@ export default function EnrollmentPage() {
                   </div>
 
                   <div className="form-buttons-group">
-                    <button type="submit" className="btn btn-primary btn-lg submit-enroll-btn">
-                      <span>Submit Enrollment Application</span>
-                      <ArrowRight size={18} aria-hidden="true" />
+                    <button
+                      type="submit"
+                      className="btn btn-primary btn-lg submit-enroll-btn"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <span>Submitting...</span>
+                      ) : (
+                        <>
+                          <span>Submit Enrollment Application</span>
+                          <ArrowRight size={18} aria-hidden="true" />
+                        </>
+                      )}
                     </button>
                     <a href={dynamicWaUrl} target="_blank" rel="noopener noreferrer" className="btn btn-wa btn-lg enroll-wa-direct">
                       <MessageSquare size={18} />
@@ -279,28 +356,34 @@ export default function EnrollmentPage() {
                 <div className="selected-summary-card card">
                   <span className="summary-tag">Selected Program Track</span>
                   <h3 className="summary-title">{selectedCourseObj.title}</h3>
-                  <p className="summary-desc">{selectedCourseObj.shortDescription}</p>
+                  <p className="summary-desc">{selectedCourseObj.shortDescription || selectedCourseObj.description || ''}</p>
 
                   <div className="summary-meta-list">
                     <div className="summary-meta-item">
                       <Clock size={15} className="summary-meta-icon" />
                       <span>Duration: <strong>{selectedCourseObj.duration}</strong></span>
                     </div>
-                    <div className="summary-meta-item">
-                      <CheckCircle2 size={15} className="summary-meta-icon" />
-                      <span>Schedule: <strong>{selectedCourseObj.schedule}</strong></span>
-                    </div>
-                    <div className="summary-meta-item">
-                      <ShieldCheck size={15} className="summary-meta-icon" />
-                      <span>Tuition: <strong>{selectedCourseObj.fees}</strong></span>
-                    </div>
+                    {selectedCourseObj.schedule && (
+                      <div className="summary-meta-item">
+                        <CheckCircle2 size={15} className="summary-meta-icon" />
+                        <span>Schedule: <strong>{selectedCourseObj.schedule}</strong></span>
+                      </div>
+                    )}
+                    {selectedCourseObj.fees && (
+                      <div className="summary-meta-item">
+                        <ShieldCheck size={15} className="summary-meta-icon" />
+                        <span>Tuition: <strong>{selectedCourseObj.fees}</strong></span>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="summary-tags-row">
-                    {selectedCourseObj.tags.map((t, idx) => (
-                      <span key={idx} className="summary-tag-pill">{t}</span>
-                    ))}
-                  </div>
+                  {selectedCourseObj.tags && (
+                    <div className="summary-tags-row">
+                      {selectedCourseObj.tags.map((t, idx) => (
+                        <span key={idx} className="summary-tag-pill">{t}</span>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="summary-note">
                     <AlertCircle size={15} className="summary-note-icon" />

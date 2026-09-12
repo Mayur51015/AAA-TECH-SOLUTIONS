@@ -2,12 +2,19 @@ import { apiRequest } from './api';
 
 /**
  * Submit course enrollment application to MySQL backend
- * @param {{ fullName: string, email: string, mobile: string, course: string, plan: string, message?: string }} data
+ * @param {{ full_name: string, email: string, mobile: string, course_id: number, plan_id?: number, message?: string }} data
  */
 export async function submitEnrollment(data) {
   return await apiRequest('/enrollments', {
     method: 'POST',
-    body: JSON.stringify(data)
+    body: JSON.stringify({
+      full_name: data.full_name || data.fullName,
+      mobile: data.mobile,
+      email: data.email,
+      course_id: data.course_id || data.courseId,
+      plan_id: data.plan_id || data.planId || null,
+      message: data.message || ''
+    })
   });
 }
 

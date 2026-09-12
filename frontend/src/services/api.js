@@ -45,6 +45,12 @@ export async function apiRequest(endpoint, options = {}) {
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
+      if (response.status === 401 && authToken) {
+        try {
+          localStorage.removeItem('aaa_admin_token');
+          window.dispatchEvent(new Event('auth:unauthorized'));
+        } catch {}
+      }
       const errorMsg = data?.message || data?.error || `Request failed with status ${response.status}`;
       const error = new Error(errorMsg);
       error.status = response.status;

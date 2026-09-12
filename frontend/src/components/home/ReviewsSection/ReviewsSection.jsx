@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Send, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { Star, Send, CheckCircle2, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import SectionHeader from '../../common/SectionHeader/SectionHeader';
 import { getReviews, submitReview } from '../../../services';
 import './ReviewsSection.css';
@@ -68,6 +68,7 @@ export default function ReviewsSection() {
   const [formText, setFormText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   // Fetch approved reviews from MySQL backend on component load
   useEffect(() => {
@@ -98,43 +99,34 @@ export default function ReviewsSection() {
     if (!formName.trim() || !formText.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
-
-    const newReview = {
-      id: Date.now(),
-      name: formName.trim(),
-      date: "Just now",
-      stars: formStars,
-      course: formCourse.trim() || "Technology Program",
-      text: formText.trim(),
-      avatarBg: "linear-gradient(135deg, #1565C0, #00B4D8)"
-    };
+    setApiError('');
 
     try {
-      await submitReview({
+      const res = await submitReview({
         name: formName.trim(),
         course: formCourse.trim(),
         rating: formStars,
         review_text: formText.trim()
       });
-    } catch (err) {
-      console.warn('Backend review submission offline, saved locally:', err.message);
-    }
 
-    const updated = [newReview, ...reviews];
-    setReviews(updated);
-    try {
-      localStorage.setItem('aaa_reviews', JSON.stringify(updated));
-    } catch (err) {
-      console.warn(err);
-    }
+      if (res && res.success === false) {
+        setApiError(res.message || 'Failed to submit review. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
 
-    setFormName('');
-    setFormCourse('');
-    setFormText('');
-    setFormStars(5);
-    setHoverStars(0);
-    setIsSubmitting(false);
-    setFormSubmitted(true);
+      setFormName('');
+      setFormCourse('');
+      setFormText('');
+      setFormStars(5);
+      setHoverStars(0);
+      setIsSubmitting(false);
+      setFormSubmitted(true);
+    } catch (err) {
+      console.error('Review submission error:', err);
+      setApiError(err.message || 'Failed to submit review. Please try again.');
+      setIsSubmitting(false);
+    }
   };
 
   const handleKeyDownStar = (e, starVal) => {
@@ -228,11 +220,14 @@ export default function ReviewsSection() {
                 <div className="review-success-state">
                   <CheckCircle2 size={44} className="review-success-icon" />
                   <h4>Thank You!</h4>
-                  <p>Your review has been posted successfully and added to our student feedback.</p>
+                  <p>Your review has been submitted for approval and will appear once verified by our team.</p>
                   <button
                     type="button"
                     className="btn btn-outline btn-sm write-another-btn"
-                    onClick={() => setFormSubmitted(false)}
+                    onClick={() => {
+                      setFormSubmitted(false);
+                      setApiError('');
+                    }}
                   >
                     <RefreshCw size={14} aria-hidden="true" />
                     <span>Write Another Review</span>
@@ -240,6 +235,12 @@ export default function ReviewsSection() {
                 </div>
               ) : (
                 <form onSubmit={handleReviewSubmit} className="review-form">
+                  {apiError && (
+                    <div className="modal-api-error-banner" role="alert" style={{ marginBottom: '1rem' }}>
+                      <AlertCircle size={16} aria-hidden="true" />
+                      <span>{apiError}</span>
+                    </div>
+                  )}
                   <div className="form-group">
                     <label htmlFor="reviewer-name" className="form-label">
                       Your Name <span className="req-star">*</span>

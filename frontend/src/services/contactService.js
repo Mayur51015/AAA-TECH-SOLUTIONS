@@ -7,7 +7,13 @@ import { apiRequest } from './api';
 export async function submitContact(data) {
   return await apiRequest('/contacts', {
     method: 'POST',
-    body: JSON.stringify(data)
+    body: JSON.stringify({
+      name: data.name,
+      email: data.email,
+      phone: data.phone || null,
+      subject: data.subject || data.inquiryType || 'General Inquiry',
+      message: data.message
+    })
   });
 }
 

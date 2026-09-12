@@ -78,13 +78,14 @@ exports.validateReview = (req, res, next) => {
 };
 
 exports.validateAdminLogin = (req, res, next) => {
-  const { email, password } = req.body;
+  const { username, email, adminId, password } = req.body;
+  const userIdentifier = (username || adminId || email || '').trim();
 
-  if (!email || !isValidEmail(email.trim())) {
-    return res.status(400).json({ success: false, message: 'A valid email is required.' });
+  if (!userIdentifier) {
+    return res.status(400).json({ success: false, message: 'Username is required.' });
   }
 
-  if (!password) {
+  if (!password || !password.trim()) {
     return res.status(400).json({ success: false, message: 'Password is required.' });
   }
 

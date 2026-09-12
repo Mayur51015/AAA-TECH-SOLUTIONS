@@ -44,7 +44,7 @@ class Review {
     const { name, course_id, rating, review_text } = data;
     const [result] = await pool.query(
       'INSERT INTO reviews (name, course_id, rating, review_text, status) VALUES (?, ?, ?, ?, ?)',
-      [name, course_id || null, rating || 5, review_text, 'approved'] // auto-approve verified user reviews or pending
+      [name, course_id || null, rating || 5, review_text, 'pending']
     );
     return result.insertId;
   }

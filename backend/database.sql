@@ -9,19 +9,19 @@ USE aaa_tech_db;
 -- -------------------------------------------------------
 -- 1. ADMIN USERS TABLE
 -- -------------------------------------------------------
-CREATE TABLE IF NOT EXISTS admin_users (
+CREATE TABLE IF NOT EXISTS admins (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  full_name VARCHAR(100) NOT NULL,
-  email VARCHAR(150) NOT NULL UNIQUE,
+  username VARCHAR(100) NOT NULL UNIQUE,
+  name VARCHAR(150) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(50) DEFAULT 'admin',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Seed Default Admin User (admin@gmail.com / admin123)
-INSERT INTO admin_users (full_name, email, password_hash, role)
-VALUES ('Super Admin', 'admin@gmail.com', 'admin123', 'superadmin')
-ON DUPLICATE KEY UPDATE full_name = VALUES(full_name);
+-- Seed initial admin via `npm run create-admin` CLI tool with bcrypt hashing (12 rounds)
 
 -- -------------------------------------------------------
 -- 2. CONTACT MESSAGES TABLE (Contact Page Submissions)

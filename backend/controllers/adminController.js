@@ -7,91 +7,101 @@ const Application = require('../models/Application');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'aaa_tech_solutions_super_secret_jwt_key_2026';
 
-// Helper to generate signed JWT token
+// Helper to generate signed JWT token with 8h expiry
 const generateToken = (admin) => {
   return jwt.sign(
-    { id: admin.id, email: admin.email, role: admin.role, name: admin.name },
+    {
+      id: admin.id,
+      username: admin.username,
+      name: admin.name,
+      role: admin.role
+    },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '8h' }
   );
 };
 
-// @desc    Admin login (with database lookup & master environment fallback)
+// @desc    Admin login with secure database verification & bcrypt
 // @route   POST /api/admin/login
 exports.adminLogin = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-    const cleanEmail = (email || '').trim();
-    const envAdminEmail = process.env.ADMIN_EMAIL || 'admin@gmail.com';
-    const envAdminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const { username, email, adminId, password } = req.body;
+    const identifier = (username || adminId || email || '').trim();
+    const cleanPassword = (password || '').trim();
 
-    // 1. Direct environment variable master fallback (ensures login always works)
-    if (cleanEmail.toLowerCase() === envAdminEmail.toLowerCase() && 
-       (password === envAdminPassword || password === 'admin123' || password === 'Mayur@12')) {
-      const fallbackAdmin = { id: 1, name: 'Super Administrator', email: envAdminEmail, role: 'admin' };
-      const token = generateToken(fallbackAdmin);
-      return res.status(200).json({
-        success: true,
-        message: 'Login successful',
-        token,
-        admin: fallbackAdmin
+    if (!identifier || !cleanPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username and password are required.'
       });
     }
 
-    // 2. Database lookup
-    try {
-      const admin = await Admin.findByEmail(cleanEmail);
-      if (admin) {
-        const isMatch = await Admin.matchPassword(password, admin.password_hash);
-        if (isMatch) {
-          const token = generateToken(admin);
-          return res.status(200).json({
-            success: true,
-            message: 'Login successful',
-            token,
-            admin: {
-              id: admin.id,
-              name: admin.name,
-              email: admin.email,
-              role: admin.role
-            }
-          });
-        }
-      }
-    } catch (dbErr) {
-      console.warn('Database query during login failed, checking fallback:', dbErr.message);
+    // 1. Look up admin in MySQL database by username or email
+    const admin = await Admin.findByIdentifier(identifier);
+    if (!admin) {
+      // Generic error message: do not reveal if username exists
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid username or password.'
+      });
     }
 
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid email or password.'
+    // 2. Check if account is active
+    if (!admin.is_active) {
+      return res.status(403).json({
+        success: false,
+        message: 'Account has been deactivated. Please contact support.'
+      });
+    }
+
+    // 3. Compare password using bcrypt
+    const isMatch = await Admin.matchPassword(cleanPassword, admin.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid username or password.'
+      });
+    }
+
+    // 4. Generate secure JWT token
+    const token = generateToken(admin);
+
+    // 5. Return success with safe admin object (never return password or password_hash)
+    return res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      token,
+      admin: {
+        id: admin.id,
+        username: admin.username,
+        name: admin.name,
+        role: admin.role
+      }
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get current authenticated admin
+// @desc    Get currently authenticated admin user
 // @route   GET /api/admin/me
 exports.getMe = async (req, res, next) => {
   try {
-    try {
-      const admin = await Admin.findById(req.user.id);
-      if (admin) {
-        return res.status(200).json({ success: true, data: admin });
-      }
-    } catch (err) {
-      console.warn('Database error in getMe, using token payload:', err.message);
+    const admin = await Admin.findById(req.user.id);
+    if (!admin || !admin.is_active) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please login.'
+      });
     }
 
-    // Fallback to token payload
     res.status(200).json({
       success: true,
-      data: {
-        id: req.user.id,
-        name: req.user.name || 'Super Administrator',
-        email: req.user.email,
-        role: req.user.role || 'admin'
+      admin: {
+        id: admin.id,
+        username: admin.username,
+        name: admin.name,
+        role: admin.role
       }
     });
   } catch (error) {
@@ -99,7 +109,7 @@ exports.getMe = async (req, res, next) => {
   }
 };
 
-// @desc    Get dashboard metrics & summary
+// @desc    Get dashboard metrics & summary (Admin only)
 // @route   GET /api/admin/stats
 exports.getDashboardStats = async (req, res, next) => {
   try {

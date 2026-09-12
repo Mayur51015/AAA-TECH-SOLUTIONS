@@ -1,0 +1,47 @@
+.admin-auth-loading {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: var(--color-bg-alt, #f8fafc);
+}
+
+.admin-loading-card {
+  background: #ffffff;
+  padding: 3rem 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+}
+
+.admin-loading-spinner {
+  color: var(--color-primary, #0284c7);
+  animation: spin 1s linear infinite;
+  margin-bottom: 1.25rem;
+}
+
+.admin-loading-card h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.5rem;
+}
+
+.admin-loading-card p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

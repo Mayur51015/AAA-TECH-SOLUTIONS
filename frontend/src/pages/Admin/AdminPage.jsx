@@ -15,11 +15,9 @@ import {
   Trash2,
   RefreshCw
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import {
-  adminLogin,
-  getAdminMe,
   getAdminStats,
-  adminLogout,
   getEnrollments,
   updateEnrollmentStatus,
   getContacts,
@@ -29,15 +27,8 @@ import { apiRequest } from '../../services/api';
 import './AdminPage.css';
 
 export default function AdminPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const { admin, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview'); // overview, enrollments, contacts, reviews, applications
-
-  // Login form state
-  const [loginEmail, setLoginEmail] = useState('admin@gmail.com');
-  const [loginPassword, setLoginPassword] = useState('admin123');
-  const [loginError, setLoginError] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Dashboard Data State
   const [stats, setStats] = useState({
@@ -52,25 +43,9 @@ export default function AdminPage() {
   const [applications, setApplications] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // Check existing login on mount
+  // Load dashboard data on mount
   useEffect(() => {
-    async function verifyAuth() {
-      const token = localStorage.getItem('aaa_admin_token');
-      if (token) {
-        try {
-          const res = await getAdminMe();
-          if (res.success) {
-            setIsAuthenticated(true);
-            setCurrentUser(res.data);
-            loadDashboardData();
-          }
-        } catch {
-          adminLogout();
-          setIsAuthenticated(false);
-        }
-      }
-    }
-    verifyAuth();
+    loadDashboardData();
   }, []);
 
   const loadDashboardData = async () => {
@@ -102,31 +77,8 @@ export default function AdminPage() {
     }
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoginError('');
-    setIsLoggingIn(true);
-
-    try {
-      const res = await adminLogin({ email: loginEmail, password: loginPassword });
-      if (res.success) {
-        setIsAuthenticated(true);
-        setCurrentUser(res.admin);
-        loadDashboardData();
-      } else {
-        setLoginError(res.message || 'Invalid credentials');
-      }
-    } catch (err) {
-      setLoginError(err.message || 'Login failed. Please verify backend is running.');
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
   const handleLogout = () => {
-    adminLogout();
-    setIsAuthenticated(false);
-    setCurrentUser(null);
+    logout();
   };
 
   // Status Updaters
@@ -183,84 +135,6 @@ export default function AdminPage() {
   };
 
   // -------------------------------------------------------
-  // RENDER: LOGIN FORM
-  // -------------------------------------------------------
-  if (!isAuthenticated) {
-    return (
-      <div className="admin-page-container">
-        <div className="container">
-          <div className="admin-login-wrapper">
-            <div className="admin-login-header">
-              <div className="admin-lock-icon-box">
-                <Lock size={28} />
-              </div>
-              <h1 className="admin-login-title">Administrator Portal</h1>
-              <p className="admin-login-desc">Sign in with your administrative credentials to manage enrollments and inquiries.</p>
-            </div>
-
-            {loginError && (
-              <div className="admin-error-alert" role="alert">
-                <AlertCircle size={18} />
-                <span>{loginError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleLogin} className="admin-login-form">
-              <div className="form-group">
-                <label className="form-label" htmlFor="admin-email">Admin Email</label>
-                <input
-                  id="admin-email"
-                  type="email"
-                  required
-                  placeholder="admin@gmail.com"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  className="form-input"
-                  disabled={isLoggingIn}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="admin-password">Password</label>
-                <input
-                  id="admin-password"
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  className="form-input"
-                  disabled={isLoggingIn}
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="btn btn-primary btn-lg"
-                style={{ width: '100%', marginTop: '8px' }}
-                disabled={isLoggingIn}
-              >
-                {isLoggingIn ? (
-                  <>
-                    <Loader2 size={18} className="spinner-icon" />
-                    <span>Signing in...</span>
-                  </>
-                ) : (
-                  <span>Access Dashboard</span>
-                )}
-              </button>
-            </form>
-
-            <div className="admin-hint-box">
-              🔑 <strong>Default Admin:</strong> <code>admin@gmail.com</code> / <code>admin123</code> (or your <code>.env</code> settings)
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // -------------------------------------------------------
   // RENDER: AUTHENTICATED DASHBOARD
   // -------------------------------------------------------
   return (
@@ -271,7 +145,7 @@ export default function AdminPage() {
           <div>
             <h1 className="admin-welcome-title">Control Center</h1>
             <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>
-              Welcome back, <strong>{currentUser?.name || 'Administrator'}</strong> <span className="admin-role-badge">{currentUser?.role || 'admin'}</span>
+              Welcome back, <strong>{admin?.name || 'Administrator'}</strong> <span className="admin-role-badge">{admin?.role || 'admin'}</span>
             </p>
           </div>
 

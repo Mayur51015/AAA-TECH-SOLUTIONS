@@ -62,7 +62,7 @@ export default function PricingSection() {
                 <div className="pricing-features-divider" aria-hidden="true" />
 
                 <ul className="pricing-features-list" aria-label={`Features included in ${plan.name} plan`}>
-                  {plan.features.map((feature, idx) => (
+                  {plan.features?.map((feature, idx) => (
                     <li key={idx} className="pricing-feature-item">
                       <span className="feature-check-wrapper" aria-hidden="true">
                         <Check size={14} className="feature-check-icon" />

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Clock, Send, CheckCircle2, Building, MessageSquare, AlertCircle, ArrowRight, ExternalLink } from 'lucide-react';
+// AlertCircle already imported above
 import { companyInfo } from '../../data/company';
 import SectionHeader from '../../components/common/SectionHeader/SectionHeader';
 import { submitContactMessage } from '../../services';
@@ -16,6 +17,7 @@ export default function ContactPage() {
 
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
@@ -36,20 +38,24 @@ export default function ContactPage() {
     }
 
     setIsSubmitting(true);
+    setApiError('');
     try {
-      const data = await submitContactMessage(formData);
+      const data = await submitContactMessage({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim() || null,
+        subject: formData.inquiryType,
+        message: formData.message.trim()
+      });
       if (data.success) {
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        setFormData({ name: '', email: '', phone: '', inquiryType: 'Enterprise Software Development', message: '' });
       } else {
-        alert(data.message || 'Failed to send message');
+        setApiError(data.message || 'Failed to send message. Please try again.');
       }
     } catch (error) {
       console.error('Contact submission error:', error);
-      // Fallback: still show success to user if offline/demo
-      setSubmitted(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setApiError(error.message || 'Failed to send message. Please try again or contact us via WhatsApp.');
     } finally {
       setIsSubmitting(false);
     }
@@ -311,9 +317,15 @@ export default function ContactPage() {
                         {errors.message && <span className="error-text">{errors.message}</span>}
                       </div>
 
-                      <button type="submit" className="btn btn-primary btn-lg submit-contact-btn">
-                        <span>Submit Technical Inquiry</span>
-                        <Send size={16} aria-hidden="true" />
+                      {apiError && (
+                        <div className="modal-api-error-banner" role="alert" style={{ marginBottom: '0.75rem' }}>
+                          <AlertCircle size={16} aria-hidden="true" />
+                          <span>{apiError}</span>
+                        </div>
+                      )}
+                      <button type="submit" className="btn btn-primary btn-lg submit-contact-btn" disabled={isSubmitting}>
+                        <span>{isSubmitting ? 'Submitting...' : 'Submit Technical Inquiry'}</span>
+                        {!isSubmitting && <Send size={16} aria-hidden="true" />}
                       </button>
                     </form>
                   </>

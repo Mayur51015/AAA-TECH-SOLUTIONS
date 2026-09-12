@@ -1,22 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, CheckCircle2, MessageSquare, Loader2, ArrowRight } from 'lucide-react';
+import { X, CheckCircle2, MessageSquare, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
 import { useEnrollmentModal } from '../../../context/EnrollmentContext';
 import { coursesData } from '../../../data/courses';
 import { companyInfo } from '../../../data/company';
-import { submitEnrollmentApplication } from '../../../services';
+import { submitEnrollmentApplication, getCourses, getCoursePlans } from '../../../services';
 import './EnrollmentModal.css';
-
-const planOptions = [
-  { value: "Starter", label: "Starter (₹1,000 — Single Module / Topic)" },
-  { value: "Monthly", label: "Monthly (₹1,500/mo — 1 Month Full Course)" },
-  { value: "2-Month", label: "2-Month (₹3,000 — 2 Month Full Course)" },
-  { value: "Premium", label: "Premium (₹5,000 — Advanced Bundle & Mentorship)" }
-];
 
 export default function EnrollmentModal() {
   const { isEnrollmentOpen, selectedCourseId, selectedPlan, closeEnrollmentModal } = useEnrollmentModal();
   const modalRef = useRef(null);
   const firstInputRef = useRef(null);
+
+  // Real courses & plans from API
+  const [apiCourses, setApiCourses] = useState([]);
+  const [apiPlans, setApiPlans] = useState([]);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -28,28 +25,109 @@ export default function EnrollmentModal() {
   });
 
   const [formErrors, setFormErrors] = useState({});
+  const [apiError, setApiError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [refId, setRefId] = useState('');
 
+  // Fetch courses and plans from MySQL on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadData() {
+      try {
+        const courses = await getCourses();
+        if (courses && courses.length > 0 && isMounted) {
+          setApiCourses(courses);
+        }
+      } catch (err) {
+        console.warn('Failed to load courses from API:', err.message);
+      }
+
+      try {
+        const plans = await getCoursePlans();
+        if (plans && plans.length > 0 && isMounted) {
+          setApiPlans(plans);
+        }
+      } catch (err) {
+        console.warn('Failed to load plans from API:', err.message);
+      }
+    }
+    loadData();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Build the list of courses for the dropdown
+  // Prefer API courses (have numeric MySQL IDs), fallback to static data
+  const courseOptions = apiCourses.length > 0
+    ? apiCourses.map(c => ({ id: c.id, title: c.title, duration: c.duration || '', slug: c.slug }))
+    : coursesData.map(c => ({ id: c.id, title: c.title, duration: c.duration || '', slug: c.id }));
+
+  // Build the list of plans for the dropdown
+  const planOptions = apiPlans.length > 0
+    ? apiPlans.map(p => ({
+        id: p.id,
+        value: String(p.id),
+        label: `${p.name} (${p.price}${p.billing ? ` ${p.billing}` : ''} — ${p.description || ''})`
+      }))
+    : [
+        { id: 1, value: '1', label: "Starter (₹1,000 — Single Module / Topic)" },
+        { id: 2, value: '2', label: "Monthly (₹1,500/mo — 1 Month Full Course)" },
+        { id: 3, value: '3', label: "2-Month (₹3,000 — 2 Month Full Course)" },
+        { id: 4, value: '4', label: "Premium (₹5,000 — Advanced Bundle & Mentorship)" }
+      ];
+
   // Sync selectedCourseId & selectedPlan when modal opens
   useEffect(() => {
     if (isEnrollmentOpen) {
-      let initialPlan = '';
+      let initialCourseId = '';
+      let initialPlanId = '';
+
+      // Resolve selectedCourseId — may be numeric ID or string slug
+      if (selectedCourseId) {
+        if (!isNaN(selectedCourseId)) {
+          // Numeric ID from API
+          initialCourseId = String(selectedCourseId);
+        } else {
+          // String slug from static data — find matching API course
+          const matched = courseOptions.find(c =>
+            String(c.id) === String(selectedCourseId) ||
+            c.slug === selectedCourseId ||
+            c.title.toLowerCase() === String(selectedCourseId).toLowerCase()
+          );
+          initialCourseId = matched ? String(matched.id) : selectedCourseId;
+        }
+      }
+
+      // Resolve selectedPlan — may be numeric ID or plan name string
       if (selectedPlan) {
-        const matched = planOptions.find(p =>
-          p.value.toLowerCase() === selectedPlan.toLowerCase() ||
-          p.label.toLowerCase().includes(selectedPlan.toLowerCase())
-        );
-        initialPlan = matched ? matched.value : selectedPlan;
+        if (!isNaN(selectedPlan)) {
+          initialPlanId = String(selectedPlan);
+        } else {
+          // Match by plan name
+          const matchedPlan = apiPlans.find(p =>
+            p.name && p.name.toLowerCase() === selectedPlan.toLowerCase()
+          ) || apiPlans.find(p =>
+            p.planValue && p.planValue.toLowerCase() === selectedPlan.toLowerCase()
+          );
+          initialPlanId = matchedPlan ? String(matchedPlan.id) : '';
+
+          // Fallback: try static plan options
+          if (!initialPlanId) {
+            const staticMatch = planOptions.find(p =>
+              p.label.toLowerCase().includes(selectedPlan.toLowerCase())
+            );
+            initialPlanId = staticMatch ? staticMatch.value : '';
+          }
+        }
       }
 
       setFormData(prev => ({
         ...prev,
-        courseId: selectedCourseId || '',
-        plan: initialPlan
+        courseId: initialCourseId,
+        plan: initialPlanId
       }));
       setFormErrors({});
+      setApiError('');
       setSubmitted(false);
 
       // Focus first input on open
@@ -97,6 +175,9 @@ export default function EnrollmentModal() {
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
+    if (apiError) {
+      setApiError('');
+    }
   };
 
   const validateForm = () => {
@@ -135,37 +216,27 @@ export default function EnrollmentModal() {
     }
 
     setIsSubmitting(true);
-
-    const generatedId = `AAA-ENR-${Math.floor(100000 + Math.random() * 900000)}`;
+    setApiError('');
 
     try {
-      await submitEnrollmentApplication({
-        fullName: formData.fullName,
-        email: formData.email,
-        mobile: formData.phone,
-        course: selectedCourseObj ? selectedCourseObj.title : formData.courseId,
-        plan: formData.plan || 'Standard',
-        message: formData.message || ''
+      const result = await submitEnrollmentApplication({
+        full_name: formData.fullName.trim(),
+        email: formData.email.trim(),
+        mobile: formData.phone.trim(),
+        course_id: Number(formData.courseId) || formData.courseId,
+        plan_id: formData.plan ? (Number(formData.plan) || null) : null,
+        message: formData.message.trim()
       });
+
+      // Use server-returned enrollment ID
+      const enrollmentId = result?.data?.id || result?.enrollmentId;
+      setRefId(enrollmentId ? `AAA-ENR-${enrollmentId}` : `AAA-ENR-${Math.floor(100000 + Math.random() * 900000)}`);
+      setIsSubmitting(false);
+      setSubmitted(true);
     } catch (apiErr) {
-      console.warn('Backend offline or enrollment API error, saving locally:', apiErr);
-    }
-
-    setRefId(generatedId);
-    setIsSubmitting(false);
-    setSubmitted(true);
-
-    // Save submission record to localStorage
-    try {
-      const existing = JSON.parse(localStorage.getItem('aaa_enrollments') || '[]');
-      existing.push({
-        refId: generatedId,
-        ...formData,
-        submittedAt: new Date().toISOString()
-      });
-      localStorage.setItem('aaa_enrollments', JSON.stringify(existing));
-    } catch (err) {
-      console.warn(err);
+      setIsSubmitting(false);
+      const errorMessage = apiErr?.message || apiErr?.data?.message || 'Enrollment submission failed. Please try again or contact us via WhatsApp.';
+      setApiError(errorMessage);
     }
   };
 
@@ -175,8 +246,11 @@ export default function EnrollmentModal() {
     }
   };
 
+  // Find selected course object for WhatsApp message
+  const selectedCourseObj = courseOptions.find(c => String(c.id) === String(formData.courseId));
+  const selectedCourseName = selectedCourseObj?.title || 'General Course Track';
+
   // WhatsApp Enquiry Link Construction
-  const selectedCourseName = coursesData.find(c => c.id === formData.courseId)?.title || 'General Course Track';
   const waNumber = companyInfo.contact.whatsapp || '917358533721';
   const waMessage = encodeURIComponent(
     `🎓 *New Enrollment Enquiry — AAA Tech Solutions*\n\n` +
@@ -262,6 +336,14 @@ export default function EnrollmentModal() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="enrollment-modal-form" noValidate>
+              {/* API Error Banner */}
+              {apiError && (
+                <div className="modal-api-error-banner" role="alert">
+                  <AlertCircle size={16} aria-hidden="true" />
+                  <span>{apiError}</span>
+                </div>
+              )}
+
               {/* Full Name */}
               <div className={`modal-form-group ${formErrors.fullName ? 'has-error' : ''}`}>
                 <label htmlFor="modal-full-name" className="modal-form-label">
@@ -340,9 +422,9 @@ export default function EnrollmentModal() {
                   disabled={isSubmitting}
                 >
                   <option value="">-- Select Course --</option>
-                  {coursesData.map((course) => (
+                  {courseOptions.map((course) => (
                     <option key={course.id} value={course.id}>
-                      {course.title} ({course.duration})
+                      {course.title}{course.duration ? ` (${course.duration})` : ''}
                     </option>
                   ))}
                 </select>
@@ -366,7 +448,7 @@ export default function EnrollmentModal() {
                 >
                   <option value="">-- Select Plan --</option>
                   {planOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
+                    <option key={opt.id || opt.value} value={opt.value || opt.id}>
                       {opt.label}
                     </option>
                   ))}
