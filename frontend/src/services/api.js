@@ -62,7 +62,7 @@ export async function apiRequest(endpoint, options = {}) {
   } catch (error) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
-      throw new Error('Server request timed out. Please verify backend is running on http://localhost:5000');
+      throw new Error(`Server request timed out. Please verify the backend server is running and reachable at ${API_BASE_URL}`);
     }
     throw error;
   }

@@ -21,11 +21,17 @@ lerna-debug.log*
 
 # Environment Variables & Secrets
 .env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 *.env
 .env.local
 .env.*.local
-backend/.env
-frontend/.env
 
 # Editor & OS files
 .vscode/*
