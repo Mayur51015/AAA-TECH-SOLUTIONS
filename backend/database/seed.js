@@ -6,21 +6,41 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const isSSL = process.env.DB_SSL === 'true' || 
               (process.env.DB_HOST && process.env.DB_HOST.includes('tidbcloud.com')) ||
-              (process.env.DB_PORT && parseInt(process.env.DB_PORT, 10) === 4000);
+              (process.env.DB_PORT && parseInt(process.env.DB_PORT, 10) === 4000) ||
+              Boolean(process.env.DB_SSL_CA);
+
+function getSslConfig() {
+  if (!isSSL) return undefined;
+  const ssl = {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
+  };
+  if (process.env.DB_SSL_CA) {
+    try {
+      if (fs.existsSync(process.env.DB_SSL_CA)) {
+        ssl.ca = fs.readFileSync(process.env.DB_SSL_CA);
+      } else {
+        ssl.ca = process.env.DB_SSL_CA;
+      }
+    } catch (e) {
+      console.warn('⚠️ Could not load DB_SSL_CA in seed.js:', e.message);
+    }
+  }
+  return ssl;
+}
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  multipleStatements: true,
-  ...(isSSL ? {
-    ssl: {
-      minVersion: 'TLSv1.2',
-      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
-    }
-  } : {})
+  multipleStatements: true
 };
+
+const sslConfig = getSslConfig();
+if (sslConfig) {
+  dbConfig.ssl = sslConfig;
+}
 
 const DB_NAME = process.env.DB_NAME || 'aaa_tech_solutions';
 

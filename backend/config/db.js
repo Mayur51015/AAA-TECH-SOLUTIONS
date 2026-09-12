@@ -3,12 +3,42 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
-// Determine if SSL is required (TiDB Cloud, port 4000, or DB_SSL=true)
+// Determine if SSL/TLS is required (TiDB Cloud, port 4000, or DB_SSL=true)
 const isSSL = process.env.DB_SSL === 'true' || 
               (process.env.DB_HOST && process.env.DB_HOST.includes('tidbcloud.com')) ||
-              (process.env.DB_PORT && parseInt(process.env.DB_PORT, 10) === 4000);
+              (process.env.DB_PORT && parseInt(process.env.DB_PORT, 10) === 4000) ||
+              Boolean(process.env.DB_SSL_CA);
 
-// Database configuration with environment variable and TiDB Cloud support
+/**
+ * Build SSL configuration for secure MySQL / TiDB Cloud TLS connections
+ * TiDB Cloud strictly requires secure TLS 1.2+ connections.
+ */
+function getSslConfig() {
+  if (!isSSL) return undefined;
+
+  const sslConfig = {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
+  };
+
+  // Optional custom CA certificate support (file path or certificate string)
+  if (process.env.DB_SSL_CA) {
+    const fs = require('fs');
+    try {
+      if (fs.existsSync(process.env.DB_SSL_CA)) {
+        sslConfig.ca = fs.readFileSync(process.env.DB_SSL_CA);
+      } else {
+        sslConfig.ca = process.env.DB_SSL_CA;
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not load custom DB_SSL_CA certificate:', err.message);
+    }
+  }
+
+  return sslConfig;
+}
+
+// Database configuration with environment variable and TiDB Cloud SSL support
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 3306,
@@ -22,15 +52,15 @@ const dbConfig = {
   keepAliveInitialDelay: 0
 };
 
-if (isSSL) {
-  dbConfig.ssl = {
-    minVersion: 'TLSv1.2',
-    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
-  };
+const sslConfig = getSslConfig();
+if (sslConfig) {
+  dbConfig.ssl = sslConfig;
 }
 
-// Create a connection pool using mysql2/promise
-const pool = mysql.createPool(dbConfig);
+// Support DATABASE_URL if explicitly provided, else use structured dbConfig
+const pool = process.env.DATABASE_URL
+  ? mysql.createPool(process.env.DATABASE_URL)
+  : mysql.createPool(dbConfig);
 
 // Safe connection verification
 pool.getConnection()
