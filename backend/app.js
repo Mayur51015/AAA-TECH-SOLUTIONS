@@ -13,15 +13,30 @@ app.use(helmet({
 
 // CORS Configuration
 const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/$/, ''))
   : ['http://localhost:3000', 'http://localhost:5173'];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g. mobile apps or curl) or if origin is in whitelist
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+    // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    const normalizedOrigin = origin.replace(/\/$/, '');
+
+    // Allow in development or if origin matches configured allowed origins or wildcard
+    if (
+      process.env.NODE_ENV !== 'production' ||
+      allowedOrigins.includes('*') ||
+      allowedOrigins.includes(normalizedOrigin) ||
+      // Support all Vercel deployments (*.vercel.app) if allowedOrigins includes any vercel domain or explicitly permitted
+      (allowedOrigins.some(o => o.includes('.vercel.app')) && normalizedOrigin.endsWith('.vercel.app')) ||
+      normalizedOrigin.includes('localhost') ||
+      normalizedOrigin.includes('127.0.0.1')
+    ) {
       return callback(null, true);
     }
+
+    console.warn(`⚠️ Blocked by CORS: Origin ${origin} is not in allowed origins:`, allowedOrigins);
     return callback(new Error('Blocked by CORS policy'));
   },
   credentials: true,

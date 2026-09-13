@@ -8,7 +8,11 @@
     "dev": "node --watch server.js",
     "seed": "node database/seed.js",
     "db:seed": "node database/seed.js",
-    "create-admin": "node scripts/createAdmin.js"
+    "create-admin": "node scripts/createAdmin.js",
+    "build": "echo 'Backend ready'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": [],
   "author": "",

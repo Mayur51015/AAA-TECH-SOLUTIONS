@@ -30,7 +30,8 @@ export async function apiRequest(endpoint, options = {}) {
   };
 
   const controller = new AbortController();
-  const timeoutMs = options.timeout || 8000;
+  // Render Free Tier services spin down after inactivity; cold starts can take 30-40s.
+  const timeoutMs = options.timeout || 45000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -62,7 +63,7 @@ export async function apiRequest(endpoint, options = {}) {
   } catch (error) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
-      throw new Error(`Server request timed out. Please verify the backend server is running and reachable at ${API_BASE_URL}`);
+      throw new Error(`Server request timed out. If the backend is hosted on a free tier (e.g. Render), it may be waking up from sleep. Please wait a moment and try again.`);
     }
     throw error;
   }

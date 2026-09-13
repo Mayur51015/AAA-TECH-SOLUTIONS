@@ -1,0 +1,46 @@
+# ==============================================================================
+# Render Blueprint Specification (Infrastructure-as-Code)
+# AAA Tech Solutions - Deployment Configuration
+# ==============================================================================
+# Learn more: https://render.com/docs/blueprint-spec
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Backend Express REST API Service
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: aaa-tech-backend
+    runtime: node
+    plan: free
+    region: oregon # or ohio, frankfurt, singapore
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: CORS_ORIGIN
+        sync: false # Set to your frontend Vercel URL e.g. https://your-project.vercel.app
+      - key: DB_HOST
+        sync: false # e.g. gateway01.ap-southeast-1.prod.aws.tidbcloud.com
+      - key: DB_PORT
+        value: 4000 # 4000 for TiDB Cloud, 3306 for MySQL
+      - key: DB_USER
+        sync: false # TiDB Cloud / MySQL username
+      - key: DB_PASSWORD
+        sync: false # TiDB Cloud / MySQL password
+      - key: DB_NAME
+        value: aaa_tech_solutions
+      - key: DB_SSL
+        value: true
+      - key: JWT_SECRET
+        generateValue: true # Render automatically generates a secure 256-bit random key
+      - key: ADMIN_EMAIL
+        value: admin@gmail.com
+      - key: ADMIN_PASSWORD
+        sync: false # Set secure admin password in Render dashboard
