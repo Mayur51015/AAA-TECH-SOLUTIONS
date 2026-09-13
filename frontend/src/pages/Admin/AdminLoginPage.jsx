@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, User, Key, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import logoImg from '../../assets/logo.png';
 import { useAuth } from '../../context/AuthContext';
 import './AdminLoginPage.css';
 
@@ -10,11 +11,11 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { login, isAuthenticated, authError } = useAuth();
+  const { login, isAuthenticated, error: authError } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Redirect if already authenticated
+  // If already authenticated, redirect immediately
   useEffect(() => {
     if (isAuthenticated) {
       const destination = location.state?.from?.pathname || '/admin/dashboard';
@@ -22,7 +23,7 @@ export default function AdminLoginPage() {
     }
   }, [isAuthenticated, navigate, location]);
 
-  // Sync authError from session expiry
+  // Sync auth errors
   useEffect(() => {
     if (authError) {
       setError(authError);
@@ -64,6 +65,11 @@ export default function AdminLoginPage() {
     <div className="admin-login-page">
       <div className="container">
         <div className="admin-login-card">
+          <div className="admin-login-brand">
+            <Link to="/" title="Back to AAA Tech Solutions Home">
+              <img src={logoImg} alt="AAA Tech Solutions" className="admin-brand-logo" />
+            </Link>
+          </div>
           <div className="admin-login-header">
             <div className="admin-lock-icon-box" aria-hidden="true">
               <Lock size={28} />

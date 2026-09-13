@@ -18,6 +18,24 @@
   border: 1px solid rgba(226, 232, 240, 0.9);
 }
 
+.admin-login-brand {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.admin-brand-logo {
+  height: 48px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+  display: inline-block;
+  transition: transform var(--transition-fast, 0.2s);
+}
+
+.admin-brand-logo:hover {
+  transform: scale(1.03);
+}
+
 .admin-login-header {
   text-align: center;
   margin-bottom: 2rem;

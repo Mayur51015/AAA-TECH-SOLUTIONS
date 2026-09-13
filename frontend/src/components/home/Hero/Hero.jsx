@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, MessageSquare, ShieldCheck, Terminal, Layers, Cpu, Award, CheckCircle2 } from 'lucide-react';
 import BrandLogo from '../../common/BrandLogo/BrandLogo';
+import logoLightImg from '../../../assets/logo-light.png';
 import { companyInfo } from '../../../data/company';
 import './Hero.css';
 
@@ -24,23 +25,18 @@ export default function Hero() {
       <div className="container hero-container">
         {/* Left Content Column */}
         <div className="hero-content">
-          <div className="hero-badges-wrapper">
-            <div className="msme-badge">
-              <ShieldCheck size={14} />
-              <span>MSME / Udyam Registered Enterprise</span>
-            </div>
-            <div className="hero-badge">
-              <span className="hero-badge-dot"></span>
-              <span>Online Learning & Enterprise Software</span>
-            </div>
+          <div className="hero-badge">
+            <span className="hero-badge-dot"></span>
+            <span>Enterprise Engineering & Practical Learning</span>
           </div>
 
           <h1 className="hero-title">
-            Engineering Dependable <span className="shimmer-text">Tech Solutions</span> & Empowering Careers
+            Empowering Your <span className="text-gradient">Digital Growth</span> with Intelligent Solutions.
           </h1>
 
           <p className="hero-subtitle">
-            AAA Tech Solutions delivers practical software engineering, cloud architecture, and industry-focused professional programs designed around real-world business needs.
+            We build scalable, enterprise-grade software applications and equip the next generation
+            of tech professionals with hands-on, industry-tested technical expertise.
           </p>
 
           <div className="hero-cta-group">
@@ -85,16 +81,11 @@ export default function Hero() {
 
             <div className="hero-center-logo-wrap">
               <div className="hero-center-inner">
-                <div className="hero-logo-large">
-                  <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="hero-svg-mark">
-                    <rect width="60" height="60" rx="16" fill="rgba(255,255,255,0.08)" stroke="rgba(0,180,216,0.4)" strokeWidth="1.5" />
-                    <path d="M14 42L24 18L34 42H29L24 29.5L19 42H14Z" fill="#FFFFFF" />
-                    <path d="M26 42L34.5 23.5L43 42H39L34.5 31.5L30 42H26Z" fill="#00B4D8" />
-                    <path d="M37 42L43.5 28.5L50 42H47L43.5 35L40 42H37Z" fill="#1E88E5" />
-                  </svg>
-                  <div className="hero-logo-name">AAA TECH</div>
-                  <div className="hero-logo-sub">SOLUTIONS</div>
-                </div>
+                <img
+                  src={logoLightImg}
+                  alt="AAA Tech Solutions"
+                  className="hero-logo-img"
+                />
               </div>
             </div>
 

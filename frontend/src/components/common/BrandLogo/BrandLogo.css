@@ -1,7 +1,6 @@
 .brand-logo {
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
   text-decoration: none;
   user-select: none;
   transition: transform var(--transition-fast), opacity var(--transition-fast);
@@ -12,70 +11,21 @@
   opacity: 0.95;
 }
 
-.brand-icon-wrapper {
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.brand-mark-svg {
-  width: 100%;
-  height: 100%;
+.brand-logo-img {
+  height: 44px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
   display: block;
 }
 
-.brand-mark-bg {
-  fill: var(--navy);
+.brand-logo-dark .brand-logo-img {
+  filter: drop-shadow(0 2px 12px rgba(0, 180, 216, 0.3));
 }
 
-.brand-mark-chevron-1 {
-  fill: #FFFFFF;
-}
-
-.brand-mark-chevron-2 {
-  fill: var(--cyan);
-}
-
-.brand-mark-chevron-3 {
-  fill: var(--sky);
-}
-
-.brand-text-wrapper {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.05;
-}
-
-.brand-name {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--navy);
-}
-
-.brand-subtext {
-  font-family: var(--font-sans);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: var(--blue);
-}
-
-/* Dark / Navbar / Footer Variant */
-.brand-logo-dark .brand-name {
-  color: #FFFFFF;
-}
-
-.brand-logo-dark .brand-subtext {
-  color: var(--cyan);
-}
-
-.brand-logo-dark .brand-mark-bg {
-  fill: rgba(255, 255, 255, 0.08);
-  stroke: rgba(0, 180, 216, 0.35);
-  stroke-width: 1.2px;
+@media (max-width: 640px) {
+  .brand-logo-img {
+    height: 36px;
+    max-width: 180px;
+  }
 }
