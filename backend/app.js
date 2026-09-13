@@ -14,7 +14,7 @@ app.use(helmet({
 // CORS Configuration
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/$/, ''))
-  : ['http://localhost:3000', 'http://localhost:5173'];
+  : ['http://localhost:3000', 'http://localhost:5173', 'https://aaa-tech-solutions.vercel.app'];
 
 app.use(cors({
   origin: (origin, callback) => {

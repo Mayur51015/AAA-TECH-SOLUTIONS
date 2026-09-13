@@ -25,7 +25,7 @@ services:
       - key: PORT
         value: 5000
       - key: CORS_ORIGIN
-        sync: false # Set to your frontend Vercel URL e.g. https://your-project.vercel.app
+        value: https://aaa-tech-solutions.vercel.app # Pre-configured with your production Vercel frontend URL
       - key: DB_HOST
         sync: false # e.g. gateway01.ap-southeast-1.prod.aws.tidbcloud.com
       - key: DB_PORT
