@@ -57,7 +57,7 @@ export const coursesData = [
     enrollmentUrl: "/enrollment?course=aws-devops-engineering",
     overview: "Hands-on AWS labs.",
     syllabus: [{ module: "Module 1", title: "AWS Core", topics: ["EC2, VPC, S3"] }],
-    learningOutcomes: ["AWS Certified prep"],
+    learningOutcomes: ["AWS Certified Prep"],
     tools: ["AWS"]
   }
 ];
