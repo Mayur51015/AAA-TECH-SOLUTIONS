@@ -9,7 +9,8 @@
     "seed": "node database/seed.js",
     "db:seed": "node database/seed.js",
     "create-admin": "node scripts/createAdmin.js",
-    "build": "echo 'Backend ready'"
+    "build": "echo 'Backend ready'",
+    "test": "node -c server.js && node -c app.js"
   },
   "engines": {
     "node": ">=18.0.0"
