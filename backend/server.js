@@ -7,7 +7,7 @@ const { initDatabase } = require('./database/initDb');
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, async () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`\n======================================================`);
   console.log(`🚀 AAA Tech Solutions Backend Server Running`);
   console.log(`📡 URL: http://localhost:${PORT}`);
