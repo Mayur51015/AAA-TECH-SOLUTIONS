@@ -10,7 +10,7 @@ services:
   # Backend Express REST API Service
   # ----------------------------------------------------------------------------
   - type: web
-    name: aaa-tech-backend
+    name: aaa-tech-solutions
     runtime: node
     plan: free
     region: oregon # or ohio, frankfurt, singapore
@@ -26,6 +26,8 @@ services:
         value: 5000
       - key: CORS_ORIGIN
         value: https://aaa-tech-solutions.vercel.app # Pre-configured with your production Vercel frontend URL
+      - key: FRONTEND_URL
+        value: https://aaa-tech-solutions.vercel.app
       - key: DB_HOST
         sync: false # e.g. gateway01.ap-southeast-1.prod.aws.tidbcloud.com
       - key: DB_PORT

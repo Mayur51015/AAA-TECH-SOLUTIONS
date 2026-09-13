@@ -12,8 +12,13 @@ app.use(helmet({
 }));
 
 // CORS Configuration
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/$/, ''))
+const envOrigins = [
+  ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : []),
+  ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [])
+].map(o => o.trim().replace(/\/$/, '')).filter(Boolean);
+
+const allowedOrigins = envOrigins.length > 0
+  ? envOrigins
   : ['http://localhost:3000', 'http://localhost:5173', 'https://aaa-tech-solutions.vercel.app'];
 
 app.use(cors({

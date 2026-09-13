@@ -71,7 +71,7 @@ If you prefer to configure manually without Blueprint:
    | `ADMIN_PASSWORD` | `YourAdminSecret123!` | Default admin password |
 6. Click **"Deploy Web Service"**.
 7. Copy your backend URL once live:
-   `https://aaa-tech-backend.onrender.com`
+   `https://aaa-tech-solutions.onrender.com`
 
 ---
 
@@ -110,7 +110,7 @@ If your cloud database is new, run the seed script to create all tables and init
 4. Expand **"Environment Variables"** and add:
    | Key | Value | Description |
    | :--- | :--- | :--- |
-   | `VITE_API_URL` | `https://aaa-tech-backend.onrender.com/api` | Your Render backend URL + `/api` |
+   | `VITE_API_URL` | `https://aaa-tech-solutions.onrender.com/api` | Your Render backend URL + `/api` |
 5. Click **"Deploy"**.
 6. Vercel will build and deploy your site in ~30 seconds, giving you a production URL:
    `https://aaa-tech-solutions.vercel.app`
@@ -120,7 +120,7 @@ If your cloud database is new, run the seed script to create all tables and init
 ## 🔗 Step 4: Final Connection (CORS Setup)
 
 1. Copy your new Vercel frontend URL (e.g. `https://aaa-tech-solutions.vercel.app`).
-2. Go back to your **Render Dashboard** -> **aaa-tech-backend** -> **Environment**.
+2. Go back to your **Render Dashboard** -> **aaa-tech-solutions** -> **Environment**.
 3. Edit or add `CORS_ORIGIN`:
    ```env
    CORS_ORIGIN=https://aaa-tech-solutions.vercel.app
@@ -132,8 +132,8 @@ If your cloud database is new, run the seed script to create all tables and init
 
 ## 🔍 Verification & Testing
 
-- **Backend Health Check:** Open `https://aaa-tech-backend.onrender.com/health` in your browser. You should see `{"status":"ok","database":"MySQL",...}`.
-- **Backend API Check:** Open `https://aaa-tech-backend.onrender.com/api` in your browser. You should see `{"name":"AAA Tech Solutions API",...}`.
+- **Backend Health Check:** Open `https://aaa-tech-solutions.onrender.com/health` in your browser. You should see `{"status":"ok","database":"MySQL",...}`.
+- **Backend API Check:** Open `https://aaa-tech-solutions.onrender.com/api` in your browser. You should see `{"name":"AAA Tech Solutions API",...}`.
 - **Frontend Check:** Visit your Vercel URL.
 - **Client-Side Routing Test:** Directly visit or refresh `https://your-app.vercel.app/courses` or `/about` (verifies SPA rewrite in `vercel.json`).
 - **Admin Login:** Visit `/admin/login` and log in with your configured `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
